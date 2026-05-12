@@ -1,0 +1,58 @@
+name: proxy-line-observer
+
+services:
+  config-ui:
+    build:
+      context: ./data/config-ui
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./data/config:/app/config
+      - ./data/config-ui/app.py:/app/app.py:ro
+
+  influxdb:
+    image: influxdb:2.7-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8086:8086"
+    env_file:
+      - ./data/config/stack.env
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+    volumes:
+      - ./data/runtime/influxdb:/var/lib/influxdb2
+      - ./data/runtime/influxdb-config:/etc/influxdb2
+
+  grafana:
+    image: grafana/grafana-oss:11.3.0
+    restart: unless-stopped
+    user: "0"
+    depends_on:
+      - influxdb
+    ports:
+      - "127.0.0.1:3000:3000"
+    env_file:
+      - ./data/config/stack.env
+    volumes:
+      - ./data/runtime/grafana:/var/lib/grafana
+      - ./data/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./data/grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+  telegraf:
+    build:
+      context: .
+      dockerfile: ./data/telegraf/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - influxdb
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - ./data/config/stack.env
+    volumes:
+      - ./data/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ./data/probes:/probes:ro
+      - ./data/config:/config:ro

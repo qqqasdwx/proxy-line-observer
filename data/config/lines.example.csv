@@ -1,0 +1,5 @@
+line,proxy_url,enabled
+line_a_http,http://host.docker.internal:7890,false
+line_b_socks,socks5h://host.docker.internal:7891,false
+lan_http,http://192.168.1.10:7890,false
+lan_socks,socks5h://192.168.1.10:7891,false
